@@ -1,55 +1,36 @@
-const STATIC_CACHE = 'worker-demo-v1';
-const ACTIVE = 'active-v1';
+var CACHE_NAME = 'workers-v1';
+var urlsToCache = ['/index.html', '/styles.css', '/app.js', '/favicon.png'];
 
-const PRECACHE_URLS = ['index.html', 'app.js'];
-
-self.addEventListener('install', event => {
+self.addEventListener('install', function(event) {
   event.waitUntil(
-    caches
-      .open(STATIC_CACHE)
-      .then(cache => cache.addAll(PRECACHE_URLS))
-      .then(self.skipWaiting())
+    caches.open(CACHE_NAME).then(function(cache) {
+      return cache.addAll(urlsToCache);
+    })
   );
 });
 
-self.addEventListener('activate', event => {
-  const currentCaches = [STATIC_CACHE, ACTIVE];
+self.addEventListener('fetch', function(event) {
+  event.respondWith(
+    caches.match(event.request).then(function(response) {
+      if (response) {
+        return response;
+      }
 
-  event.waitUntil(
-    caches
-      .keys()
-      .then(cacheNames => {
-        return cacheNames.filter(
-          cacheName => !currentCaches.includes(cacheName)
-        );
-      })
-      .then(cachesToDelete => {
-        return Promise.all(
-          cachesToDelete.map(cacheToDelete => {
-            return caches.delete(cacheToDelete);
-          })
-        );
-      })
-      .then(() => self.clients.claim())
-  );
-});
+      var fetchRequest = event.request.clone();
 
-self.addEventListener('fetch', event => {
-  if (event.request.url.startsWith(self.location.origin)) {
-    event.respondWith(
-      caches.match(event.request).then(cachedResponse => {
-        if (cachedResponse) {
-          return cachedResponse;
+      return fetch(fetchRequest).then(function(response) {
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
         }
 
-        return caches.open(ACTIVE).then(cache => {
-          return fetch(event.request).then(response => {
-            return cache.put(event.request, response.clone()).then(() => {
-              return response;
-            });
-          });
+        var responseToCache = response.clone();
+
+        caches.open(CACHE_NAME).then(function(cache) {
+          cache.put(event.request, responseToCache);
         });
-      })
-    );
-  }
+
+        return response;
+      });
+    })
+  );
 });
