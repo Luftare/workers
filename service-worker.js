@@ -1,5 +1,5 @@
 var CACHE_NAME = 'workers-v1';
-var urlsToCache = ['/index.html', '/styles.css', '/app.js', '/favicon.png'];
+var urlsToCache = ['index.html', 'styles.css', 'app.js', 'favicon.png'];
 
 self.addEventListener('install', function(event) {
   event.waitUntil(
