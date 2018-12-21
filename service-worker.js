@@ -1,7 +1,7 @@
 const STATIC_CACHE = 'worker-demo-v1';
 const ACTIVE = 'active-v1';
 
-const PRECACHE_URLS = ['index.html', 'styles.css', 'app.js'];
+const PRECACHE_URLS = ['index.html', 'app.js'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
