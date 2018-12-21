@@ -1,4 +1,4 @@
-const filesToCache = ['styles.css', 'app.js', 'index.html'];
+const filesToCache = ['styles.css', 'app.js', 'index.html', 'favicon.ico'];
 
 const staticCacheName = 'workers-cache-v1';
 
