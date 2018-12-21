@@ -1,55 +1,50 @@
-const filesToCache = ['styles.css', 'app.js', 'index.html', 'favicon.ico'];
+const CACHE = 'workers-cache-v2';
 
-const staticCacheName = 'workers-cache-v1';
+self.addEventListener('install', function(evt) {
+  console.log('The service worker is being installed.');
 
-self.addEventListener('install', event => {
-  console.log('Attempting to install service worker and cache static assets');
-  event.waitUntil(
-    caches.open(staticCacheName).then(cache => {
-      return cache.addAll(filesToCache);
+  evt.waitUntil(
+    caches.open(CACHE).then(function(cache) {
+      cache.addAll(['./controlled.html', './asset']);
     })
   );
 });
 
-self.addEventListener('fetch', event => {
-  console.log('Fetch event for ', event.request.url);
-  event.respondWith(
-    caches
-      .match(event.request)
-      .then(response => {
-        if (response) {
-          console.log('Found ', event.request.url, ' in cache');
-          return response;
-        }
-        console.log('Network request for ', event.request.url);
-        return fetch(event.request).then(response => {
-          // TODO 5 - Respond with custom 404 page
-          return caches.open(staticCacheName).then(cache => {
-            cache.put(event.request.url, response.clone());
-            return response;
-          });
-        });
-      })
-      .catch(error => {
-        // TODO 6 - Respond with custom offline page
-      })
-  );
+self.addEventListener('fetch', function(evt) {
+  console.log('The service worker is serving the asset.');
+
+  evt.respondWith(fromCache(evt.request));
+
+  evt.waitUntil(update(evt.request).then(refresh));
 });
 
-self.addEventListener('activate', event => {
-  console.log('Activating new service worker...');
+function fromCache(request) {
+  return caches.open(CACHE).then(function(cache) {
+    return cache.match(request);
+  });
+}
 
-  const cacheWhitelist = [staticCacheName];
+function update(request) {
+  return caches.open(CACHE).then(function(cache) {
+    return fetch(request).then(function(response) {
+      return cache.put(request, response.clone()).then(function() {
+        return response;
+      });
+    });
+  });
+}
 
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-});
+function refresh(response) {
+  return self.clients.matchAll().then(function(clients) {
+    clients.forEach(function(client) {
+      var message = {
+        type: 'refresh',
+        url: response.url,
+
+        eTag: response.headers.get('ETag'),
+      };
+
+      client.postMessage(JSON.stringify(message));
+    });
+  });
+}
